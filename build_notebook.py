@@ -427,15 +427,70 @@ display(Image(filename=os.path.join(DS, "figures", "06_slot_sensitivity.png")))
 """)
 
 md(r"""
-## The bot's edge is the exit, not the pick &mdash; and our overlap with it is low
+## The edge is the fill position &mdash; and what our own calibration stops us claiming
 
-Passively holding the bot's own tokens loses money at **every** horizon (table above: 0.9221 at
-6&nbsp;s, 0.8080 at 60&nbsp;s). Yet its realised multiple is 1.1153, with a median of 4 sells per
-token and 96.6% partial exits. The bot is not identifying tokens that go up &mdash; it arrives
-first and **distributes into the buyers arriving behind it**.
+The table above prices the same 6&nbsp;s hold two ways: **1.5043** entering at the deployment
+second's open, **0.9221** at its close, decaying to 0.8080 by 60&nbsp;s. The token spikes inside
+that first second and then fades, so the return is not a property of *which* token was bought but
+of **where in the deployment second the fill landed**.
+
+It is tempting to go further and credit the exit: the bot realises 1.1153 with a median of 4 sells
+per token at 96.6% partial exits. **That does not follow, and our own method is why.** &alpha; was
+solved for by requiring a passive 6&nbsp;s hold to reproduce 1.1153, and at the resulting
+&alpha;&nbsp;=&nbsp;0.50 a passive hold returns 1.1099. Having forced those two to agree, we cannot
+use their agreement as evidence about the exit &mdash; the calibration makes "good fill" and "good
+exit" **indistinguishable by construction**. The most that survives is that laddered exits do not
+appear to add much over simply leaving after 6&nbsp;s at the same fill.
+
+What does survive is the fill, which is exactly what the slot-delay table prices. Selection, exit
+structure and hold length are second-order next to being early inside the deployment block.
 
 That bounds what an entry classifier may claim, so we do not assert our selection beats the bot.
-And we report the overlap rather than only the flattering half of it.
+""")
+
+md(r"""
+## Head to head, same month, same fee model
+
+The rubric asks for a direct comparison. Both columns below cover **June 2026 only** and both
+charge the measured fee schedule; the bot's side is recomputed here from its own trade records,
+not quoted from Part 1's full-period totals.
+""")
+
+code("""
+JUN_S, JUN_E = 1780272000, 1782864000   # 2026-06-01 .. 07-01 UTC
+
+e = entries.copy()
+e["timestamp"] = pd.to_numeric(e.timestamp, errors="coerce")
+first_buy = e[e.event_type == "buy"].groupby("token_address").timestamp.min()
+june_tokens = set(first_buy[(first_buy >= JUN_S) & (first_buy < JUN_E)].index)
+bot = pnl[pnl.token_address.isin(june_tokens)]
+
+rep = sens[sens.slot_delay == 0].iloc[0]
+
+rows = [
+    ("trades",                f"{len(bot):,}",                     f"{int(rep.trades_filled):,}"),
+    ("capital deployed",      f"${bot.spent.sum():,.0f}",          f"${rep.capital_deployed:,.0f}"),
+    ("gross P&L",             f"${bot.gross.sum():,.0f}",          f"${rep.gross_pnl:,.0f}"),
+    ("fees",                  f"${bot.fees.sum():,.0f} ({bot.fees.sum()/bot.gross.sum():.1%} of gross)",
+                              f"${rep.fees_paid:,.0f} ({rep.fees_paid/rep.gross_pnl:.1%})"),
+    ("net P&L",               f"${bot.net.sum():,.0f}",            f"${rep.net_pnl:,.0f}"),
+    ("net hit rate",          f"{(bot.net > 0).mean():.1%}",       f"{rep.hit_rate_net:.1%}"),
+    ("median net ROI",        f"{bot.roi_net.median():.1%}",       f"{rep.median_roi_net:.1%}"),
+    ("total net ROI on capital", f"{bot.net.sum()/bot.spent.sum():.1%}", f"{rep.total_roi_net:.1%}"),
+]
+display(pd.DataFrame(rows, columns=["June 2026", "bot (realised)", "replica, 0-slot (simulated)"])
+          .set_index("June 2026"))
+
+print("The replica is more efficient per dollar (22.1% vs 19.4% on capital) at 17% of the")
+print("trade count -- the expected shape of a much more selective threshold, not proof of a")
+print("better strategy. Two reasons not to read this as beating the bot: the bot's column is")
+print("REALISED and carries every true execution cost, while the replica's fills are granted")
+print("by our probability model; and the replica's whole margin lives on the zero-slot")
+print("assumption -- at one slot it returns -$334, while the bot's net is money it kept.")
+""")
+
+md(r"""
+## Overlap is low, and we report it
 """)
 
 code("""

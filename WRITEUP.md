@@ -183,15 +183,56 @@ median ROI *rose* with delay (6.9% → 9.6% → 19.3%) as fills fell 718 → 302
 survivorship did the rest. Delay cannot be an advantage, so that was a modelling error, not a
 finding. Delay is now priced as **a later, worse fill** along the open→close path.
 
-### The bot's edge is in the exit, not the pick
+### The edge is the fill position, and neither selection nor exit explains it
 
-Passively holding the bot's own tokens loses money at every horizon (α=1: 0.9221 at 6 s, 0.8651
-at 30 s, 0.8080 at 60 s — monotonically worse). Yet its realised multiple is **1.1153**, with a
-median of **4 sells per token** and **96.6% partial exits**.
+Holding the bot's own tokens for its median 6 s returns **1.5043** entering at the deployment
+second's open and **0.9221** entering at its close. The token spikes inside that first second and
+then decays — 0.9221 at 6 s, 0.8651 at 30 s, 0.8080 at 60 s. So the return is not a property of
+*which* token was bought; it is a property of **where in the deployment second the fill landed**.
 
-The bot is therefore not identifying tokens that go up. It is arriving first and **distributing
-into the buyers who arrive behind it**. We state this explicitly because it bounds what an entry
-classifier can claim: **we do not assert that our selection model beats the bot.**
+We are careful about what follows from this, because our own method limits it. The bot's realised
+multiple is **1.1153**, and it exits with a median of **4 sells per token** at **96.6% partial
+exits** — which invites the conclusion that laddered distribution is the edge. It does not
+follow. Our α was *solved for* by requiring a passive 6 s hold to reproduce 1.1153, and at the
+resulting α = 0.50 a passive hold returns **1.1099**. Having forced those two quantities to agree,
+we cannot then use their agreement to credit the exit: **the calibration makes "good fill" and
+"good exit" indistinguishable by construction.** The most we can say is that the laddered exit
+does not appear to add much over simply leaving after 6 s at the same fill.
+
+What survives is the fill. That is the same quantity Part 3 puts a price on: one slot of delay
+moves the median multiple from 1.243 to 1.012. Selection, exit structure and hold length are all
+second-order next to **being early inside the deployment block**.
+
+This bounds what an entry classifier may claim, so **we do not assert that our selection model
+beats the bot.**
+
+### Head to head against the bot, same month, same fee model
+
+The bot's own June trades, priced with the same fee accounting, against the replica at zero-slot
+delay:
+
+| June 2026 | Bot (realised) | Replica, 0-slot (simulated) |
+|---|---|---|
+| Trades | 4,194 | 718 |
+| Median position | $160 | $183 |
+| Capital deployed | $971,151 | $131,694 |
+| Gross P&L | $319,637 | $52,310 |
+| Fees | $131,553 (41.2% of gross) | $23,168 (44.3%) |
+| **Net P&L** | **$188,084** | **$29,142** |
+| Net hit rate | 57.7% | 56.0% |
+| Median net ROI | 3.6% | **6.9%** |
+| **Total net ROI on capital** | **19.4%** | **22.1%** |
+
+The replica is **more efficient per dollar and far smaller in absolute terms**: entering on the
+top 0.1% of scores, it takes 17% as many trades and returns 15% as much money, but earns 22.1%
+on deployed capital against the bot's 19.4%, at nearly the same hit rate. That is the expected
+shape of a more selective threshold, not evidence of a better strategy.
+
+**Two reasons not to read this as beating the bot.** The bot's column is *realised* and carries
+every real execution cost; the replica's is *simulated*, and its fills are granted by our
+probability model at the bot's own priority spend. And the replica's whole margin is contingent
+on the zero-slot assumption — at one slot it returns −$334, while the bot's $188,084 is money it
+actually kept.
 
 ### Overlap with the bot is low, and we report it
 
