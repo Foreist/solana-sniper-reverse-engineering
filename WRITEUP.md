@@ -234,7 +234,7 @@ leakage re-checks and the α calibration live from a published dataset, so the c
 executed rather than taken on trust.
 
 - **Code:** https://github.com/Foreist/solana-sniper-reverse-engineering
-- **Notebook:** https://www.kaggle.com/code/aleaiest/solana-sniper-reverse-engineering
+- **Notebook:** https://www.kaggle.com/code/aleaiest/the-edge-is-400-milliseconds-wide
 - **Data:** https://www.kaggle.com/datasets/aleaiest/solana-sniper-bot-reverse-engineering-data
 
 The pipeline is deterministic end to end: re-running it from the 83 GB corpus reproduces every

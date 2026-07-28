@@ -9,14 +9,23 @@ DS = "/kaggle/input/solana-sniper-bot-reverse-engineering-data"
 cells = []
 
 
+def _lines(text):
+    """nbformat stores source as a list of lines that each KEEP their trailing newline.
+
+    Dropping the newlines makes Jupyter concatenate the whole cell onto one line, which fails
+    with a SyntaxError only once the notebook actually runs on Kaggle.
+    """
+    raw = text.strip("\n").split("\n")
+    return [ln + "\n" for ln in raw[:-1]] + raw[-1:]
+
+
 def md(text):
-    cells.append({"cell_type": "markdown", "metadata": {}, "source": text.strip("\n").split("\n")})
+    cells.append({"cell_type": "markdown", "metadata": {}, "source": _lines(text)})
 
 
 def code(text):
-    lines = text.strip("\n").split("\n")
     cells.append({"cell_type": "code", "execution_count": None, "metadata": {},
-                  "outputs": [], "source": lines})
+                  "outputs": [], "source": _lines(text)})
 
 
 md(r"""
