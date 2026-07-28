@@ -233,9 +233,14 @@ All code is in the repository; the public notebook re-runs the truncation audit,
 leakage re-checks and the α calibration live from a published dataset, so the claims above can be
 executed rather than taken on trust.
 
-- **Code:** GitHub repository (linked in the submission)
-- **Notebook:** public Kaggle notebook (linked in the submission)
-- **Data:** `aleaiest/solana-sniper-bot-reverse-engineering-data`
+- **Code:** https://github.com/Foreist/solana-sniper-reverse-engineering
+- **Notebook:** https://www.kaggle.com/code/aleaiest/solana-sniper-reverse-engineering
+- **Data:** https://www.kaggle.com/datasets/aleaiest/solana-sniper-bot-reverse-engineering-data
+
+The pipeline is deterministic end to end: re-running it from the 83 GB corpus reproduces every
+intermediate artifact **byte for byte** (all seven files match by MD5, including the 51 MB scored
+test set produced by refitting the GBDT). The numbers in this write-up are what the code emits,
+not figures transcribed from a run.
 
 Pipeline: `part1_behavior.py` → `build_features.py` → `part2_model.py` → `part3_backtest.py` →
 `make_figures.py`. Fee constants are recomputed from the bot's trades by `measure_bot_costs()`
