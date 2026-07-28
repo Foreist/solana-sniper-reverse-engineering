@@ -1,0 +1,6 @@
+data/
+*.parquet
+ds_upload/
+__pycache__/
+*.pyc
+*.log
