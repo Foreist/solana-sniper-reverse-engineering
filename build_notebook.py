@@ -49,13 +49,19 @@ are published as a dataset and imported here.
 """)
 
 code(f"""
-import os, sys, json
+import os, sys, json, glob
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from IPython.display import Image, display
 
-DS = "{DS}"
+# Resolve the attached dataset by searching for a file we know it contains. The mount layout
+# under /kaggle/input varies, so locate it rather than hardcoding a path.
+hits = glob.glob("/kaggle/input/**/part1_summary.csv", recursive=True)
+DS = os.path.dirname(hits[0]) if hits else "{DS}"
+print("resolved dataset root:", DS)
+print("contents:", sorted(os.listdir(DS))[:14])
+
 sys.path.insert(0, os.path.join(DS, "code"))   # the real analysis modules, not a copy
 
 pd.set_option("display.width", 130)
