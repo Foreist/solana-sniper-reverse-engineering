@@ -121,9 +121,15 @@ and in the test split it is constant at 1.0, so the model learned it and emitted
 `deploy_slot` and `deploy_time` are excluded for the same class of reason — both increase
 monotonically with time, making them pure period indicators under a temporal split.
 
-Three re-checks now run and pass: no column separates the training classes perfectly, no column's
-mean shifts more than 2x between train and test, and the strongest single-feature AUC is 0.769
-(`secs_since_last`) — well under a 0.95 alarm threshold.
+Three re-checks run in the public notebook. No column separates the training classes perfectly,
+and the strongest single-feature AUC is 0.785 (`secs_since_last`) — well under a 0.95 alarm
+threshold, so no single column carries the model.
+
+The mean-shift check flags one column and we report it rather than loosening the threshold:
+`secs_since_last` shifts 2.02x between train (121,595 s) and test (245,305 s). That is corpus
+drift, not leakage — a "time since last seen" feature must drift upward as the observation window
+extends, and every value is still computed strictly before its own cutoff. We keep it because it
+ranks only third in permutation importance, so the model is not leaning on the drifting term.
 
 ---
 

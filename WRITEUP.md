@@ -102,13 +102,23 @@ so the model learned it and emitted a constant. `deploy_slot` and `deploy_time` 
 the same reason — both increase monotonically with time, making them pure period indicators
 under a temporal split.
 
-Three re-checks now run and pass: no column separates the training classes perfectly, no
-column's mean shifts more than 2× between splits, and the strongest single-feature AUC is
-**0.769** (`secs_since_last`), well below an alarm threshold of 0.95.
+Three re-checks now run in the public notebook. **No column separates the training classes
+perfectly**, and the strongest single-feature AUC is **0.785** (`secs_since_last`) — well below an
+alarm threshold of 0.95, so no single column is carrying the model.
+
+The mean-shift check flags exactly one column, and we report it rather than loosening the
+threshold: `secs_since_last` has a train mean of 121,595 s against 245,305 s in test, a **2.02×**
+shift. This is corpus drift, not leakage — the recency gap of a dormant wallet mechanically grows
+as the observation window extends, so any "time since last seen" feature must drift upward in a
+later period, and every value is still computed strictly before its own cutoff. We keep it
+because it ranks only **third** in permutation importance, behind two amount-based features, so
+the fitted model is not leaning on the drifting term. It is the first thing we would monitor if
+this ran forward.
 
 ### Results
 
-Feature table: **1,098,455 rows × 24 features**. Training 11,732 positives against 234,640
+Feature table: **1,098,455 rows × 24 columns, of which 18 are used as features** (identifiers,
+the label, `neg_sample_scale`, `deploy_slot` and `deploy_time` are dropped). Training 11,732 positives against 234,640
 negatives subsampled 20:1; test keeps the true prevalence — 4,195 positives against 847,888
 negatives, an imbalance of 1:202 (prevalence 0.492%).
 
