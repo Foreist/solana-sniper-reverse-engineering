@@ -129,7 +129,18 @@ negatives, an imbalance of 1:202 (prevalence 0.492%).
 | Prevalence baseline | 0.00492 | 0.500 | 0.49% |
 
 PR-AUC is **15.5× the prevalence baseline**, and in the top-5%-recall band precision is **36×**
-random. The top features are entirely deployer-history terms:
+random. Precision, recall and F1 at the two thresholds that matter:
+
+| GBDT operating point | Precision | Recall | F1 |
+|---|---|---|---|
+| Max-F1 (threshold 0.414) | 12.2% | 23.7% | **0.161** |
+| Strategy point, top 0.1% (threshold 0.720) | **17.4%** | 3.5% | 0.059 |
+
+The strategy point is deliberately off the F1 optimum. F1 rewards balancing precision against
+recall, but a sniper does not need to catch most launches — it needs the ones it does take to be
+right, because every entry costs 10.1% of position in priority fees before it can win anything.
+So we trade recall away for precision and accept the low F1 as the correct choice for the task.
+The top features are entirely deployer-history terms:
 
 `mean_buy_usd` › `total_volume_usd` › `secs_since_last` › `launch_rate_per_day` › `hist_events` ›
 `sell_to_buy_ratio` › `launches_last_24h` › `hist_launches` › `hist_sells` › `wallet_age_s`
@@ -167,11 +178,15 @@ strategy to win by being handed a better fill than the incumbent.
 
 Entering on the top 0.1% of GBDT scores gives 853 candidates in June, 852 resolvable from candles.
 
-| Slot delay | Median multiple | Median net ROI | Net hit rate | Net P&L |
-|---|---|---|---|---|
-| **0** | **1.243** | **+6.9%** | 56.0% | **+$29,142** |
-| 1 (0.4 s) | 1.012 | −15.4% | 28.5% | −$334 |
-| 2 (0.8 s) | 1.000 | −15.4% | 27.1% | −$883 |
+| Slot delay | Median multiple | Median net ROI | Total net ROI | Net hit rate | Net P&L | Max drawdown |
+|---|---|---|---|---|---|---|
+| **0** | **1.243** | **+6.9%** | **+22.1%** | 56.0% | **+$29,142** | **$445** |
+| 1 (0.4 s) | 1.012 | −15.4% | −0.6% | 28.5% | −$334 | $2,026 |
+| 2 (0.8 s) | 1.000 | −15.4% | −3.7% | 27.1% | −$883 | $1,803 |
+
+Drawdown moves the wrong way faster than P&L does. One slot late the strategy earns nothing, but
+its worst peak-to-trough deepens **4.6×** to $2,026 — it is not merely unprofitable, it is
+unprofitable *and* more violent, on a third as many trades.
 
 The mechanism is the fee asymmetry from Part 1. Costs are ~11% of position; one slot of delay
 collapses the median multiple from 1.243 to 1.012, and a 1.2% gross move cannot clear an 11%
@@ -222,11 +237,16 @@ delay:
 | Net hit rate | 57.7% | 56.0% |
 | Median net ROI | 3.6% | **6.9%** |
 | **Total net ROI on capital** | **19.4%** | **22.1%** |
+| Max drawdown | $1,131 (0.6% of net) | $445 (1.5% of net) |
+| Token overlap | — | 148 of 853 entries |
 
 The replica is **more efficient per dollar and far smaller in absolute terms**: entering on the
 top 0.1% of scores, it takes 17% as many trades and returns 15% as much money, but earns 22.1%
 on deployed capital against the bot's 19.4%, at nearly the same hit rate. That is the expected
-shape of a more selective threshold, not evidence of a better strategy.
+shape of a more selective threshold, not evidence of a better strategy. Absolute drawdown is
+smaller ($445 against $1,131) purely because the book is smaller; **relative to net profit the
+replica is the rougher ride** — 1.5% against 0.6% — which is what running a quarter of the trade
+count buys you.
 
 **Two reasons not to read this as beating the bot.** The bot's column is *realised* and carries
 every real execution cost; the replica's is *simulated*, and its fills are granted by our

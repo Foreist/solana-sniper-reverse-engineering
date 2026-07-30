@@ -343,6 +343,31 @@ g = res.loc["GBDT"]
 print(f"\\nprevalence            {prev:.3%}  (imbalance 1:{1 / prev - 1:.0f})")
 print(f"PR-AUC vs baseline    {g['PR-AUC'] / prev:.1f}x")
 print(f"precision vs random   {g['precision @ 5% recall'] / prev:.0f}x at 5% recall")
+
+# The rubric asks for precision, recall and F1 as well as PR-AUC.
+from sklearn.metrics import precision_recall_curve
+p_, r_, t_ = precision_recall_curve(y, scores.score_gbdt.values)
+f1_ = 2 * p_ * r_ / np.clip(p_ + r_, 1e-12, None)
+i_ = int(np.nanargmax(f1_))
+
+sc = scores.score_gbdt.values
+cut = np.quantile(sc, 0.999)          # the threshold Part 3 actually trades on
+pred = sc >= cut
+tp = int((pred & (y == 1)).sum()); fp = int((pred & (y == 0)).sum())
+fn = int((~pred & (y == 1)).sum())
+p_s, r_s = tp / (tp + fp), tp / (tp + fn)
+
+print()
+display(pd.DataFrame([
+    {"operating point": f"max-F1 (thr {t_[i_]:.3f})", "precision": p_[i_], "recall": r_[i_],
+     "F1": f1_[i_]},
+    {"operating point": f"strategy, top 0.1% (thr {cut:.3f})", "precision": p_s, "recall": r_s,
+     "F1": 2 * p_s * r_s / (p_s + r_s)},
+]).set_index("operating point").style.format({"precision": "{:.1%}", "recall": "{:.1%}",
+                                              "F1": "{:.3f}"}))
+print("The strategy point is deliberately off the F1 optimum: a sniper does not need to catch")
+print("most launches, it needs the ones it takes to be right -- every entry costs 10.1% of")
+print("position in priority fees before it can win anything. Recall is traded for precision.")
 """)
 
 code("""
@@ -411,18 +436,22 @@ not a finding. Delay is now priced as **a later, worse fill** along the open&rar
 
 code("""
 view = sens[["slot_delay", "trades_filled", "median_exit_multiple", "median_roi_net",
-             "hit_rate_net", "net_pnl", "fees_paid", "entry_alpha"]].copy()
+             "total_roi_net", "hit_rate_net", "net_pnl", "max_drawdown", "entry_alpha"]].copy()
 view.columns = ["slot delay", "trades filled", "median multiple", "median net ROI",
-                "net hit rate", "net P&L", "fees paid", "entry alpha"]
+                "total net ROI", "net hit rate", "net P&L", "max drawdown", "entry alpha"]
 display(view.set_index("slot delay").style.format({
-    "median multiple": "{:.3f}", "median net ROI": "{:.1%}", "net hit rate": "{:.1%}",
-    "net P&L": "${:,.0f}", "fees paid": "${:,.0f}", "trades filled": "{:,.0f}"}))
+    "median multiple": "{:.3f}", "median net ROI": "{:.1%}", "total net ROI": "{:.1%}",
+    "net hit rate": "{:.1%}", "net P&L": "${:,.0f}", "max drawdown": "${:,.0f}",
+    "trades filled": "{:,.0f}"}))
 
 z = sens[sens.slot_delay == 0].iloc[0]
 o = sens[sens.slot_delay == 1].iloc[0]
 print(f"zero-block   net P&L ${z.net_pnl:>10,.0f}   median net ROI {z.median_roi_net:+.1%}")
 print(f"one slot     net P&L ${o.net_pnl:>10,.0f}   median net ROI {o.median_roi_net:+.1%}")
 print(f"\\nswing from 400 ms: ${z.net_pnl - o.net_pnl:,.0f}")
+print(f"max drawdown deepens {o.max_drawdown / z.max_drawdown:.1f}x "
+      f"(${z.max_drawdown:,.0f} -> ${o.max_drawdown:,.0f}) on a third as many trades:")
+print("one slot late it is not merely unprofitable, it is unprofitable AND more violent.")
 display(Image(filename=os.path.join(DS, "figures", "06_slot_sensitivity.png")))
 """)
 
@@ -467,6 +496,11 @@ bot = pnl[pnl.token_address.isin(june_tokens)]
 
 rep = sens[sens.slot_delay == 0].iloc[0]
 
+# Bot drawdown on the same month, ordered by its own first-buy time.
+bot_t = bot.token_address.map(first_buy)
+eq = bot.assign(t=bot_t).sort_values("t").net.cumsum()
+bot_dd = float((eq.cummax() - eq).max())
+
 rows = [
     ("trades",                f"{len(bot):,}",                     f"{int(rep.trades_filled):,}"),
     ("capital deployed",      f"${bot.spent.sum():,.0f}",          f"${rep.capital_deployed:,.0f}"),
@@ -477,6 +511,10 @@ rows = [
     ("net hit rate",          f"{(bot.net > 0).mean():.1%}",       f"{rep.hit_rate_net:.1%}"),
     ("median net ROI",        f"{bot.roi_net.median():.1%}",       f"{rep.median_roi_net:.1%}"),
     ("total net ROI on capital", f"{bot.net.sum()/bot.spent.sum():.1%}", f"{rep.total_roi_net:.1%}"),
+    ("max drawdown",          f"${bot_dd:,.0f} ({bot_dd/bot.net.sum():.1%} of net)",
+                              f"${rep.max_drawdown:,.0f} ({rep.max_drawdown/rep.net_pnl:.1%} of net)"),
+    ("token overlap",         "--",
+                              f"{int(overlap.overlap):,} of {int(overlap.replica_entries):,} entries"),
 ]
 display(pd.DataFrame(rows, columns=["June 2026", "bot (realised)", "replica, 0-slot (simulated)"])
           .set_index("June 2026"))
