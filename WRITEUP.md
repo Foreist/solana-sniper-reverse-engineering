@@ -89,7 +89,8 @@ for **47.4% of all activity**. Their earliest surviving record has median date 2
 busiest wallets. Rather than leave a silent error, `history_truncated` is a feature, letting the
 model distinguish a measurement from a lower bound.
 
-We also fixed the join key empirically: `creator_address` is **0% populated** and unusable. The
+We also fixed the join key empirically: `creator_address` is populated on **1 of 15,927 rows** and
+so unusable. The
 deploy index's `tx_signer` is the deployer wallet — present in the activity table 100% of the
 time, and cross-checked against `launch` events at 100% agreement on 13,818 matches.
 
