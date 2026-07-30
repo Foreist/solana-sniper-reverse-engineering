@@ -167,9 +167,11 @@ entry price flips the conclusion:
 
 So we interpolate `entry = open + α·(close − open)` and **solve for the α that reproduces the
 bot's observed June median realised multiple of 1.1153** — a number we can see in its trades
-rather than one we get to choose. The sweep lands on **α = 0.50** (predicted 1.1099; the
-neighbouring grid points give 1.1678 and 1.0586). It is also physically sensible: in a sniping
-race you are neither the first nor the last fill.
+rather than one we get to choose. A 21-point sweep in steps of 0.05 lands on **α = 0.50**,
+predicting 1.1099 for an absolute error of 0.0054; its neighbours α = 0.45 and α = 0.55 predict
+1.1357 and 1.0846, missing by 0.0204 and 0.0307 — **4× and 6× worse**, so the optimum is a real
+minimum rather than a flat region we picked a point out of. It is also physically sensible: in a
+sniping race you are neither the first nor the last fill.
 
 **The replica is charged the identical α.** It is therefore structurally impossible for our
 strategy to win by being handed a better fill than the incumbent.
